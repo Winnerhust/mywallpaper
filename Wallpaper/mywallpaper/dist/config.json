@@ -1,0 +1,14 @@
+{
+  "wallpaper_dir": "C:\\Users\\chenxueyou\\Pictures\\我的壁纸",
+  "categories": [
+    "全部",
+    "风景",
+    "动漫",
+    "美女",
+    "科技"
+  ],
+  "auto_change_enabled": true,
+  "auto_change_interval": 1440,
+  "auto_change_category": "全部",
+  "auto_change_mode": "local"
+}
