@@ -5,9 +5,11 @@
     "风景",
     "动漫",
     "美女",
-    "科技"
+    "科技",
+    "城市"
   ],
   "auto_change_enabled": true,
   "auto_change_interval": 1,
-  "auto_change_category": "全部"
+  "auto_change_category": "全部",
+  "auto_change_mode": "online"
 }

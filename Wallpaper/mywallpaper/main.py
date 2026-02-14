@@ -22,6 +22,7 @@ class WallpaperApp:
         self.auto_change_enabled = self.config.get("auto_change_enabled", True)
         self.auto_change_interval = self.config.get("auto_change_interval", 1440)
         self.auto_change_category = self.config.get("auto_change_category", "全部")
+        self.auto_change_mode = self.config.get("auto_change_mode", "local")
         self.auto_change_thread = None
         self.stop_auto_change = threading.Event()
         os.makedirs(self.wallpaper_dir, exist_ok=True)
@@ -42,7 +43,8 @@ class WallpaperApp:
             "categories": ["全部", "风景", "动漫", "美女", "科技"],
             "auto_change_enabled": True,
             "auto_change_interval": 1440,
-            "auto_change_category": "全部"
+            "auto_change_category": "全部",
+            "auto_change_mode": "local"
         }
     
     def save_config(self):
@@ -51,6 +53,7 @@ class WallpaperApp:
         self.config["auto_change_enabled"] = self.auto_change_enabled
         self.config["auto_change_interval"] = self.auto_change_interval
         self.config["auto_change_category"] = self.auto_change_category
+        self.config["auto_change_mode"] = self.auto_change_mode
         with open(CONFIG_FILE, "w", encoding="utf-8") as f:
             json.dump(self.config, f, ensure_ascii=False, indent=2)
     
@@ -80,22 +83,50 @@ class WallpaperApp:
     
     def change_random_wallpaper(self):
         try:
-            category = self.auto_change_category
-            wallpapers = []
-            if category == "全部":
-                for cat in wallpaper_app.categories:
-                    if cat != "全部":
-                        wallpapers.extend(get_wallpapers_from_category(cat))
+            if self.auto_change_mode == "online":
+                self.download_and_set_online_wallpaper()
             else:
-                wallpapers = get_wallpapers_from_category(category)
-            
-            if wallpapers:
-                import random
-                wp = random.choice(wallpapers)
-                set_wallpaper_by_path(wp["path"])
-                print(f"自动换壁纸: {wp['name']}")
+                category = self.auto_change_category
+                wallpapers = []
+                if category == "全部":
+                    for cat in wallpaper_app.categories:
+                        if cat != "全部":
+                            wallpapers.extend(get_wallpapers_from_category(cat))
+                else:
+                    wallpapers = get_wallpapers_from_category(category)
+                
+                if wallpapers:
+                    import random
+                    wp = random.choice(wallpapers)
+                    set_wallpaper_by_path(wp["path"])
+                    print(f"自动换壁纸(本地): {wp['name']}")
+                else:
+                    self.download_and_set_online_wallpaper()
         except Exception as e:
             print(f"自动换壁纸失败: {e}")
+    
+    def download_and_set_online_wallpaper(self):
+        try:
+            import random
+            heights = [1080, 1200, 1440, 900, 720]
+            h = random.choice(heights)
+            w = int(h * 16 / 9)
+            seed = random.randint(1, 10000)
+            
+            url = f"https://picsum.photos/{w}/{h}"
+            filename = f"auto_wallpaper_{seed}.jpg"
+            save_dir = os.path.join(self.wallpaper_dir, "风景")
+            os.makedirs(save_dir, exist_ok=True)
+            file_path = os.path.join(save_dir, filename)
+            
+            response = requests.get(url, timeout=30)
+            if response.status_code == 200:
+                with open(file_path, "wb") as f:
+                    f.write(response.content)
+                set_wallpaper_by_path(file_path)
+                print(f"自动换壁纸(在线): {filename}")
+        except Exception as e:
+            print(f"在线壁纸下载失败: {e}")
 
 wallpaper_app = WallpaperApp()
 
@@ -248,15 +279,17 @@ def get_auto_change_config():
     return jsonify({
         "enabled": wallpaper_app.auto_change_enabled,
         "interval": wallpaper_app.auto_change_interval,
-        "category": wallpaper_app.auto_change_category
+        "category": wallpaper_app.auto_change_category,
+        "mode": wallpaper_app.auto_change_mode
     })
 
 @app.route('/api/auto-change', methods=['POST'])
 def set_auto_change_config():
     data = request.json
     wallpaper_app.auto_change_enabled = data.get('enabled', True)
-    wallpaper_app.auto_change_interval = max(5, data.get('interval', 1440))
+    wallpaper_app.auto_change_interval = max(1, data.get('interval', 1440))
     wallpaper_app.auto_change_category = data.get('category', "全部")
+    wallpaper_app.auto_change_mode = data.get('mode', "local")
     wallpaper_app.save_config()
     
     if wallpaper_app.auto_change_enabled:
@@ -268,35 +301,71 @@ def set_auto_change_config():
 
 @app.route('/api/free-wallpapers', methods=['GET'])
 def get_free_wallpapers():
+    source = request.args.get('source', 'picsum')
     category = request.args.get('category', 'all')
     import random
     
-    query_map = {
-        "风景": "nature,landscape,mountain",
-        "动漫": "anime,cartoon",
-        "美女": "portrait,people,girl",
-        "科技": "technology,computer,cyber",
-        "all": "nature,landscape,anime,technology,portrait"
-    }
-    query = query_map.get(category, "nature,landscape")
+    if source == 'picsum':
+        query_map = {
+            "风景": "nature,landscape,mountain",
+            "动漫": "anime,cartoon",
+            "美女": "portrait,people,girl",
+            "科技": "technology,computer,cyber",
+            "all": "nature,landscape,anime,technology,portrait"
+        }
+        
+        wallpapers = []
+        heights = [200, 250, 300, 350, 400, 280, 320, 380]
+        for i in range(18):
+            h = random.choice(heights)
+            w = int(h * 16 / 9)
+            seed = random.randint(1, 1000)
+            wallpapers.append({
+                "id": f"picsum_{category}_{seed}_{i}",
+                "thumb": f"https://picsum.photos/seed/{seed}/{w}/{h}",
+                "regular": f"https://picsum.photos/seed/{seed}/{w*2}/{h*2}",
+                "full": f"https://picsum.photos/seed/{seed}/1920/1080",
+                "description": f"{category}壁纸 {seed}",
+                "author": "Picsum",
+                "category": category
+            })
     
-    wallpapers = []
-    heights = [200, 250, 300, 350, 400, 280, 320, 380]
-    for i in range(18):
-        h = random.choice(heights)
-        w = int(h * 16 / 9)
-        seed = random.randint(1, 1000)
-        wallpapers.append({
-            "id": f"picsum_{category}_{seed}_{i}",
-            "thumb": f"https://picsum.photos/seed/{seed}/{w}/{h}",
-            "regular": f"https://picsum.photos/seed/{seed}/{w*2}/{h*2}",
-            "full": f"https://picsum.photos/seed/{seed}/1920/1080",
-            "description": f"{category}壁纸 {seed}",
-            "author": "Picsum",
-            "category": category
-        })
+    elif source == 'bing':
+        page = int(request.args.get('page', 0))
+        wallpapers = []
+        
+        for idx in range(8):
+            wallpapers.append({
+                "id": f"bing_{page}_{idx}",
+                "thumb": f"https://bing.biturl.top/?resolution=320x240&format=image&index={idx}",
+                "regular": f"https://bing.biturl.top/?resolution=1920x1080&format=image&index={idx}",
+                "full": f"https://bing.biturl.top/?resolution=1920x1080&format=image&index={idx}",
+                "description": f"Bing每日壁纸 {idx}",
+                "author": "Bing",
+                "category": category
+            })
+    else:
+        wallpapers = []
     
     return jsonify(wallpapers)
+
+@app.route('/api/sources', methods=['GET'])
+def get_sources():
+    return jsonify([
+        {"id": "picsum", "name": "Picsum 随机图库"},
+        {"id": "bing", "name": "必应每日壁纸"}
+    ])
+
+@app.route('/api/change-wallpaper-now', methods=['POST'])
+def change_wallpaper_now():
+    try:
+        if wallpaper_app.auto_change_mode == "online":
+            wallpaper_app.download_and_set_online_wallpaper()
+        else:
+            wallpaper_app.change_random_wallpaper()
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
 
 def run_server():
     app.run(port=5000, debug=False)
@@ -313,5 +382,5 @@ if __name__ == "__main__":
     time.sleep(1)
     print("服务器已启动: http://localhost:5000")
     
-    webview.create_window("我的壁纸", "http://localhost:5000")
-    webview.start()
+    webview.create_window(title = "",url= "http://localhost:5000", )
+    webview.start(icon="icons/small.ico")

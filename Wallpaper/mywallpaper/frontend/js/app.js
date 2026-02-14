@@ -1,6 +1,8 @@
 let currentCategory = "全部";
 let config = {};
 let currentPreviewWallpaper = null;
+let currentOnlineWallpaper = null;
+let currentSource = "picsum";
 let onlinePage = 1;
 let loadedOnlineIds = new Set();
 let loadedOnlineUrls = new Set();
@@ -9,11 +11,26 @@ const API_BASE = '/api';
 
 window.addEventListener('DOMContentLoaded', async () => {
     await loadConfig();
+    await loadSources();
     await loadCategories();
     await loadWallpapers();
     await loadOnlineWallpapers();
     setupEventListeners();
 });
+
+async function loadSources() {
+    const res = await fetch(`${API_BASE}/sources`);
+    const sources = await res.json();
+    const select = document.getElementById('wallpaper-source');
+    select.innerHTML = '';
+    sources.forEach(s => {
+        const option = document.createElement('option');
+        option.value = s.id;
+        option.textContent = s.name;
+        if (s.id === 'picsum') option.selected = true;
+        select.appendChild(option);
+    });
+}
 
 async function loadConfig() {
     const res = await fetch(`${API_BASE}/config`);
@@ -37,6 +54,7 @@ async function loadConfig() {
     const autoChangeConfig = await autoChangeRes.json();
     document.getElementById('auto-change-enabled').checked = autoChangeConfig.enabled;
     document.getElementById('auto-change-interval').value = autoChangeConfig.interval;
+    document.getElementById('auto-change-mode').value = autoChangeConfig.mode || "local";
     
     const autoChangeCategory = document.getElementById('auto-change-category');
     autoChangeCategory.innerHTML = '';
@@ -131,67 +149,7 @@ function createWallpaperItem(wp, isOnline) {
     }
     
     if (isOnline) {
-        const info = document.createElement('div');
-        info.className = 'wallpaper-info';
-        
-        const btnGroup = document.createElement('div');
-        btnGroup.className = 'wallpaper-actions';
-        
-        const downloadBtn = document.createElement('button');
-        downloadBtn.className = 'action-btn';
-        downloadBtn.textContent = '下载';
-        downloadBtn.onclick = async (e) => {
-            e.stopPropagation();
-            const category = document.getElementById('download-to-category').value;
-            const filename = `${wp.id}_${Date.now()}.jpg`;
-            const res = await fetch(`${API_BASE}/download`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ url: wp.full, category, filename })
-            });
-            const result = await res.json();
-            if (result.success) {
-                alert('下载成功！');
-                await loadWallpapers();
-            } else {
-                alert('下载失败：' + result.error);
-            }
-        };
-        
-        const setBtn = document.createElement('button');
-        setBtn.className = 'action-btn action-btn-primary';
-        setBtn.textContent = '设为壁纸';
-        setBtn.onclick = async (e) => {
-            e.stopPropagation();
-            const category = document.getElementById('download-to-category').value;
-            const filename = `${wp.id}_${Date.now()}.jpg`;
-            const res = await fetch(`${API_BASE}/download`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ url: wp.full, category, filename })
-            });
-            const result = await res.json();
-            if (result.success) {
-                const setRes = await fetch(`${API_BASE}/set-wallpaper`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ path: result.path })
-                });
-                const setResult = await setRes.json();
-                if (setResult.success) {
-                    alert('壁纸设置成功！');
-                } else {
-                    alert('壁纸设置失败: ' + setResult.error);
-                }
-            } else {
-                alert('下载失败：' + result.error);
-            }
-        };
-        
-        btnGroup.appendChild(downloadBtn);
-        btnGroup.appendChild(setBtn);
-        info.appendChild(btnGroup);
-        item.appendChild(info);
+        item.onclick = () => showOnlinePreview(wp);
     } else {
         const info = document.createElement('div');
         info.className = 'wallpaper-info';
@@ -210,16 +168,25 @@ async function loadOnlineWallpapers(append = false) {
     isLoadingOnline = true;
     
     const grid = document.getElementById('online-grid');
+    const source = document.getElementById('wallpaper-source').value;
     
     if (!append) {
         grid.innerHTML = '<div class="loading">加载中...</div>';
         loadedOnlineIds.clear();
         loadedOnlineUrls.clear();
+        onlinePage = 0;
     }
     
     try {
         const category = document.getElementById('online-category').value;
-        const res = await fetch(`${API_BASE}/free-wallpapers?category=${encodeURIComponent(category)}`);
+        let url;
+        if (source === 'bing') {
+            const seed = Date.now();
+            url = `${API_BASE}/free-wallpapers?source=${source}&category=${encodeURIComponent(category)}&page=${onlinePage}&seed=${seed}`;
+        } else {
+            url = `${API_BASE}/free-wallpapers?source=${source}&category=${encodeURIComponent(category)}`;
+        }
+        const res = await fetch(url);
         const wallpapers = await res.json();
         
         if (!append) {
@@ -233,6 +200,8 @@ async function loadOnlineWallpapers(append = false) {
             const item = createWallpaperItem(wp, true);
             grid.appendChild(item);
         });
+        
+        onlinePage++;
         
         if (newWallpapers.length === 0 && wallpapers.length > 0) {
             await loadOnlineWallpapers(true);
@@ -252,6 +221,20 @@ function showPreview(wallpaper) {
     img.src = '/wallpaper/' + wallpaper.category + '/' + wallpaper.name;
     name.textContent = wallpaper.name;
     details.textContent = `${wallpaper.width}×${wallpaper.height} | ${formatFileSize(wallpaper.size)} | ${wallpaper.category}`;
+    
+    modal.classList.add('show');
+}
+
+function showOnlinePreview(wallpaper) {
+    currentOnlineWallpaper = wallpaper;
+    const modal = document.getElementById('online-preview-modal');
+    const img = document.getElementById('online-preview-image');
+    const name = document.getElementById('online-preview-name');
+    const details = document.getElementById('online-preview-details');
+    
+    img.src = wallpaper.regular || wallpaper.full;
+    name.textContent = wallpaper.description || '在线壁纸';
+    details.textContent = `来源: ${wallpaper.author || '未知'}`;
     
     modal.classList.add('show');
 }
@@ -314,17 +297,18 @@ function setupEventListeners() {
     document.getElementById('btn-save-settings').onclick = async () => {
         const enabled = document.getElementById('auto-change-enabled').checked;
         const interval = parseInt(document.getElementById('auto-change-interval').value) || 1440;
+        const mode = document.getElementById('auto-change-mode').value;
         const category = document.getElementById('auto-change-category').value;
         
-        if (interval < 5) {
-            alert('间隔时间不能少于5分钟');
+        if (interval < 1) {
+            alert('间隔时间不能少于1分钟');
             return;
         }
         
         const res = await fetch(`${API_BASE}/auto-change`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ enabled, interval, category })
+            body: JSON.stringify({ enabled, interval, mode, category })
         });
         const result = await res.json();
         if (result.success) {
@@ -388,12 +372,76 @@ function setupEventListeners() {
         }
     };
     
+    document.getElementById('btn-online-download').onclick = async () => {
+        if (currentOnlineWallpaper) {
+            const category = document.getElementById('download-to-category').value;
+            const filename = `${currentOnlineWallpaper.id}_${Date.now()}.jpg`;
+            const res = await fetch(`${API_BASE}/download`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: currentOnlineWallpaper.full, category, filename })
+            });
+            const result = await res.json();
+            if (result.success) {
+                alert('下载成功！');
+                document.getElementById('online-preview-modal').classList.remove('show');
+                await loadWallpapers();
+            } else {
+                alert('下载失败：' + result.error);
+            }
+        }
+    };
+    
+    document.getElementById('btn-online-set-wallpaper').onclick = async () => {
+        if (currentOnlineWallpaper) {
+            const category = document.getElementById('download-to-category').value;
+            const filename = `${currentOnlineWallpaper.id}_${Date.now()}.jpg`;
+            const res = await fetch(`${API_BASE}/download`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: currentOnlineWallpaper.full, category, filename })
+            });
+            const result = await res.json();
+            if (result.success) {
+                const setRes = await fetch(`${API_BASE}/set-wallpaper`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path: result.path })
+                });
+                const setResult = await setRes.json();
+                if (setResult.success) {
+                    alert('壁纸设置成功！');
+                    document.getElementById('online-preview-modal').classList.remove('show');
+                    await loadWallpapers();
+                } else {
+                    alert('壁纸设置失败: ' + setResult.error);
+                }
+            } else {
+                alert('下载失败：' + result.error);
+            }
+        }
+    };
+    
     document.getElementById('online-category').onchange = async () => {
+        await loadOnlineWallpapers();
+    };
+    
+    document.getElementById('wallpaper-source').onchange = async () => {
         await loadOnlineWallpapers();
     };
     
     document.getElementById('btn-refresh').onclick = async () => {
         await loadWallpapers();
+    };
+    
+    document.getElementById('btn-change-now').onclick = async () => {
+        const res = await fetch(`${API_BASE}/change-wallpaper-now`, { method: 'POST' });
+        const result = await res.json();
+        if (result.success) {
+            alert('壁纸已更换！');
+        } else {
+            alert('更换失败: ' + (result.error || '未知错误'));
+        }
     };
     
     let scrollTimeout;
