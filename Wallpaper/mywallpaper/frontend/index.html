@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>我的壁纸</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
+
 <body>
     <div class="app-container">
         <header class="app-header">
@@ -16,7 +18,7 @@
                 <button id="btn-settings" class="btn" title="设置">⚙️ 设置</button>
             </div>
         </header>
-        
+
         <div class="app-main">
             <aside class="sidebar">
                 <div class="sidebar-header">
@@ -26,13 +28,13 @@
                 <ul id="category-list" class="category-list">
                 </ul>
             </aside>
-            
+
             <main class="content">
                 <div class="tabs">
-                    <button class="tab active" data-tab="online">在线壁纸</button>
-                    <button class="tab" data-tab="local">本地壁纸</button>
+                    <button class="tab active" data-tab="local">本地壁纸</button>
+                    <button class="tab" data-tab="online">在线壁纸</button>
                 </div>
-                
+
                 <div id="local-panel" class="tab-panel active">
                     <div class="toolbar">
                         <div class="toolbar-right">
@@ -43,7 +45,7 @@
                         <div class="loading">加载中...</div>
                     </div>
                 </div>
-                
+
                 <div id="online-panel" class="tab-panel">
                     <div class="toolbar">
                         <div class="toolbar-left">
@@ -69,12 +71,12 @@
                 </div>
             </main>
         </div>
-        
+
         <footer class="app-footer">
             <span id="wallpaper-count">已下载 0 张壁纸</span>
         </footer>
     </div>
-    
+
     <div id="preview-modal" class="modal">
         <div class="modal-content">
             <span class="modal-close">&times;</span>
@@ -89,7 +91,7 @@
             </div>
         </div>
     </div>
-    
+
     <div id="online-preview-modal" class="modal">
         <div class="modal-content">
             <span class="modal-close">&times;</span>
@@ -104,7 +106,7 @@
             </div>
         </div>
     </div>
-    
+
     <div id="settings-modal" class="modal">
         <div class="modal-content modal-small">
             <span class="modal-close">&times;</span>
@@ -112,10 +114,7 @@
             <div class="settings-form">
                 <div class="form-group">
                     <label>壁纸存放目录：</label>
-                    <div class="input-group">
-                        <input type="text" id="wallpaper-dir-input" class="input" readonly>
-                        <button id="btn-browse" class="btn">浏览</button>
-                    </div>
+                    <input type="text" id="wallpaper-dir-input" class="input" readonly>
                 </div>
                 <div class="form-group">
                     <label>自动换壁纸：</label>
@@ -140,11 +139,18 @@
                     <select id="auto-change-category" class="select">
                     </select>
                 </div>
+                <div class="form-group">
+                    <label>壁纸文字：</label>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="show-quote" checked>
+                        <span>显示鼓励语</span>
+                    </div>
+                </div>
                 <button id="btn-save-settings" class="btn btn-primary">保存设置</button>
             </div>
         </div>
     </div>
-    
+
     <div id="add-category-modal" class="modal">
         <div class="modal-content modal-small">
             <span class="modal-close">&times;</span>
@@ -161,4 +167,5 @@
 
     <script src="js/app.js"></script>
 </body>
+
 </html>

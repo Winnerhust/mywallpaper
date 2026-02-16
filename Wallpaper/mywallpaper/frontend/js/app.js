@@ -55,6 +55,7 @@ async function loadConfig() {
     document.getElementById('auto-change-enabled').checked = autoChangeConfig.enabled;
     document.getElementById('auto-change-interval').value = autoChangeConfig.interval;
     document.getElementById('auto-change-mode').value = autoChangeConfig.mode || "local";
+    document.getElementById('show-quote').checked = autoChangeConfig.show_quote !== false;
     
     const autoChangeCategory = document.getElementById('auto-change-category');
     autoChangeCategory.innerHTML = '';
@@ -299,6 +300,7 @@ function setupEventListeners() {
         const interval = parseInt(document.getElementById('auto-change-interval').value) || 1440;
         const mode = document.getElementById('auto-change-mode').value;
         const category = document.getElementById('auto-change-category').value;
+        const show_quote = document.getElementById('show-quote').checked;
         
         if (interval < 1) {
             alert('间隔时间不能少于1分钟');
@@ -308,7 +310,7 @@ function setupEventListeners() {
         const res = await fetch(`${API_BASE}/auto-change`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ enabled, interval, mode, category })
+            body: JSON.stringify({ enabled, interval, mode, category, show_quote })
         });
         const result = await res.json();
         if (result.success) {
@@ -316,10 +318,6 @@ function setupEventListeners() {
         } else {
             alert('设置保存失败');
         }
-    };
-    
-    document.getElementById('btn-browse').onclick = async () => {
-        alert('请在文件浏览器中选择目录，然后手动输入路径');
     };
     
     document.getElementById('wallpaper-dir-input').onchange = async (e) => {

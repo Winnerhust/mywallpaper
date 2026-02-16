@@ -16,26 +16,26 @@ CONFIG_FILE = "config.json"
 WALLPAPER_DIR = os.path.join(os.path.expanduser("~"), "Pictures", "我的壁纸")
 
 QUOTES = [
-    {"content": "天才是1%的灵感加99%的汗水", "author": "爱迪生"},
-    {"content": "知识就是力量", "author": "培根"},
-    {"content": "吾生也有涯，而知也无涯", "author": "庄子"},
-    {"content": "学而不思则罔，思而不学则殆", "author": "孔子"},
-    {"content": "业精于勤，荒于嬉；行成于思，毁于随", "author": "韩愈"},
-    {"content": "书山有路勤为径，学海无涯苦作舟", "author": "韩愈"},
-    {"content": "锲而不舍，金石可镂", "author": "荀子"},
-    {"content": "千里之行，始于足下", "author": "老子"},
-    {"content": "失败是成功之母", "author": "列宁"},
-    {"content": "世上无难事，只要肯登攀", "author": "毛泽东"},
-    {"content": "路漫漫其修远兮，吾将上下而求索", "author": "屈原"},
-    {"content": "先天下之忧而忧，后天下之乐而乐", "author": "范仲淹"},
-    {"content": "人生自古谁无死，留取丹心照汗青", "author": "文天祥"},
-    {"content": "苟利国家生死以，岂因祸福避趋之", "author": "林则徐"},
-    {"content": "我自横刀向天笑，去留肝胆两昆仑", "author": "谭嗣同"},
-    {"content": "为中华之崛起而读书", "author": "周恩来"},
-    {"content": "星星之火，可以燎原", "author": "毛泽东"},
-    {"content": "一切反动派都是纸老虎", "author": "毛泽东"},
-    {"content": "不到长城非好汉", "author": "毛泽东"},
-    {"content": "数风流人物，还看今朝", "author": "毛泽东"},
+    "今天也要加油呀！",
+    "每一天都是新的开始",
+    "相信自己，你可以的！",
+    "努力就会有收获",
+    "加油！坚持就是胜利",
+    "今天也要元气满满哦",
+    "越努力越幸运",
+    "生活不止眼前的苟且",
+    "今天的你比昨天更优秀",
+    "keep going，你可以的",
+    "阳光总在风雨后",
+    "梦想还是要有的",
+    "一切皆有可能",
+    "生活明朗，万物可爱",
+    "好好生活，慢慢相遇",
+    "你值得拥有最好的一切",
+    "平凡的生活也可以闪闪发光",
+    "愿你今天有个好心情",
+    "新的一天，新的希望",
+    "不负韶华，继续前行",
 ]
 
 app = Flask(__name__, static_folder='frontend', static_url_path='')
@@ -47,12 +47,18 @@ WALLPAPER_DIR = os.path.join(os.path.expanduser("~"), "Pictures", "我的壁纸"
 class WallpaperApp:
     def __init__(self):
         self.config = self.load_config()
-        self.wallpaper_dir = self.config.get("wallpaper_dir", WALLPAPER_DIR)
+        saved_dir = self.config.get("wallpaper_dir", "")
+        if saved_dir and os.path.exists(os.path.dirname(saved_dir)):
+            self.wallpaper_dir = saved_dir
+        else:
+            self.wallpaper_dir = WALLPAPER_DIR
+            self.config["wallpaper_dir"] = self.wallpaper_dir
         self.categories = self.config.get("categories", ["全部", "风景", "动漫", "美女", "科技"])
         self.auto_change_enabled = self.config.get("auto_change_enabled", True)
         self.auto_change_interval = self.config.get("auto_change_interval", 1440)
         self.auto_change_category = self.config.get("auto_change_category", "全部")
         self.auto_change_mode = self.config.get("auto_change_mode", "local")
+        self.show_quote = self.config.get("show_quote", True)
         self.auto_change_thread = None
         self.stop_auto_change = threading.Event()
         os.makedirs(self.wallpaper_dir, exist_ok=True)
@@ -74,13 +80,15 @@ class WallpaperApp:
             "auto_change_enabled": True,
             "auto_change_interval": 1440,
             "auto_change_category": "全部",
-            "auto_change_mode": "local"
+            "auto_change_mode": "local",
+            "show_quote": True
         }
     
     def save_config(self):
         self.config["wallpaper_dir"] = self.wallpaper_dir
         self.config["categories"] = self.categories
         self.config["auto_change_enabled"] = self.auto_change_enabled
+        self.config["show_quote"] = self.show_quote
         self.config["auto_change_interval"] = self.auto_change_interval
         self.config["auto_change_category"] = self.auto_change_category
         self.config["auto_change_mode"] = self.auto_change_mode
@@ -290,65 +298,84 @@ def set_desktop_wallpaper():
 
 def set_wallpaper_by_path(file_path):
     try:
-        quote = random.choice(QUOTES)
         img = Image.open(file_path)
         img = img.convert('RGBA')
         
-        overlay = Image.new('RGBA', img.size, (0, 0, 0, 0))
-        draw = ImageDraw.Draw(overlay)
-        
-        font_size = min(img.width, img.height) // 20
-        font = ImageFont.truetype("C:/Windows/Fonts/simkai.ttf", font_size)
-                
-        text_lines = []
-        text_lines.append(quote["content"])
-        
-        line_height = int(font_size * 1.8)
-        max_line_width = 0
-        for line in text_lines:
-            bbox = draw.textbbox((0, 0), line, font=font)
-            max_line_width = max(max_line_width, bbox[2])
-        
-        padding = 30
-        box_width = max_line_width + padding * 2
-        box_height = line_height * len(text_lines) + padding * 2
-        
-        position_x = img.width - box_width - 150
-     
-        margin = 40
-        position_y = img.height - box_height - margin
-
-        draw.rounded_rectangle(
-            [position_x, position_y, position_x + box_width, position_y + box_height],
-            radius=15,
-            fill=(0, 0, 0, 160)
-        )
-        
-        y_offset = position_y + padding
-        for i, line in enumerate(text_lines):
-            f = font if i < 2 else font
-            draw.text((position_x + padding, y_offset), line, font=f, fill=(255, 220, 180, 255))
-            y_offset += line_height
-        
-        combined = Image.alpha_composite(img, overlay)
-        combined = combined.convert('RGB')
-        
-        temp_path = file_path + ".temp.jpg"
-        combined.save(temp_path, 'JPEG', quality=95)
-        
-        SPI_SETDESKWALLPAPER = 20
-        SPIF_UPDATEINIFILE = 0x01
-        SPIF_SENDCHANGE = 0x02
-        
-        result = ctypes.windll.user32.SystemParametersInfoW(
-            SPI_SETDESKWALLPAPER,
-            0,
-            temp_path,
-            SPIF_UPDATEINIFILE | SPIF_SENDCHANGE
-        )
-        
-        if os.path.exists(temp_path):
-            os.remove(temp_path)
+        if wallpaper_app.show_quote:
+            quote = random.choice(QUOTES)
+            
+            overlay = Image.new('RGBA', img.size, (0, 0, 0, 0))
+            draw = ImageDraw.Draw(overlay)
+            
+            font_size = min(img.width, img.height) // 35
+            font = ImageFont.truetype("C:/Windows/Fonts/simkai.ttf", font_size)
+            
+            content_lines = []
+            words = quote
+            max_chars_per_line = 15
+            for i in range(0, len(words), max_chars_per_line):
+                content_lines.append(words[i:i+max_chars_per_line])
+            
+            line_height = int(font_size * 1.5)
+            max_line_width = 0
+            for line in content_lines:
+                bbox = draw.textbbox((0, 0), line, font=font)
+                max_line_width = max(max_line_width, bbox[2])
+            
+            padding = 20
+            box_width = max_line_width + padding * 2
+            box_height = line_height * len(content_lines) + padding * 2
+            
+            margin = 30
+            position_x = img.width // 4 * 3 - box_width // 2
+            position_y = img.height// 4 - box_height - margin
+            
+            if position_x < margin:
+                position_x = margin
+            if position_y < margin:
+                position_y = margin
+            
+            draw.rounded_rectangle(
+                [position_x, position_y, position_x + box_width, position_y + box_height],
+                radius=15,
+                fill=(0, 0, 0, 160)
+            )
+            
+            y_offset = position_y + padding
+            for line in content_lines:
+                draw.text((position_x + padding, y_offset), line, font=font, fill=(255, 220, 180, 255))
+                y_offset += line_height
+            
+            combined = Image.alpha_composite(img, overlay)
+            combined = combined.convert('RGB')
+            
+            temp_path = file_path + ".temp.jpg"
+            combined.save(temp_path, 'JPEG', quality=95)
+            
+            SPI_SETDESKWALLPAPER = 20
+            SPIF_UPDATEINIFILE = 0x01
+            SPIF_SENDCHANGE = 0x02
+            
+            result = ctypes.windll.user32.SystemParametersInfoW(
+                SPI_SETDESKWALLPAPER,
+                0,
+                temp_path,
+                SPIF_UPDATEINIFILE | SPIF_SENDCHANGE
+            )
+            
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+        else:
+            SPI_SETDESKWALLPAPER = 20
+            SPIF_UPDATEINIFILE = 0x01
+            SPIF_SENDCHANGE = 0x02
+            
+            result = ctypes.windll.user32.SystemParametersInfoW(
+                SPI_SETDESKWALLPAPER,
+                0,
+                file_path,
+                SPIF_UPDATEINIFILE | SPIF_SENDCHANGE
+            )
         
         return {"success": result != 0}
     except Exception as e:
@@ -360,7 +387,8 @@ def get_auto_change_config():
         "enabled": wallpaper_app.auto_change_enabled,
         "interval": wallpaper_app.auto_change_interval,
         "category": wallpaper_app.auto_change_category,
-        "mode": wallpaper_app.auto_change_mode
+        "mode": wallpaper_app.auto_change_mode,
+        "show_quote": wallpaper_app.show_quote
     })
 
 @app.route('/api/auto-change', methods=['POST'])
@@ -370,6 +398,7 @@ def set_auto_change_config():
     wallpaper_app.auto_change_interval = max(1, data.get('interval', 1440))
     wallpaper_app.auto_change_category = data.get('category', "全部")
     wallpaper_app.auto_change_mode = data.get('mode', "local")
+    wallpaper_app.show_quote = data.get('show_quote', True)
     wallpaper_app.save_config()
     
     if wallpaper_app.auto_change_enabled:
