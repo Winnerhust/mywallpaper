@@ -3,10 +3,40 @@ from flask_cors import CORS
 import os
 import json
 import requests
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 import ctypes
 import threading
 import time
+import random
+
+app = Flask(__name__, static_folder='frontend', static_url_path='')
+CORS(app)
+
+CONFIG_FILE = "config.json"
+WALLPAPER_DIR = os.path.join(os.path.expanduser("~"), "Pictures", "我的壁纸")
+
+QUOTES = [
+    {"content": "天才是1%的灵感加99%的汗水", "author": "爱迪生"},
+    {"content": "知识就是力量", "author": "培根"},
+    {"content": "吾生也有涯，而知也无涯", "author": "庄子"},
+    {"content": "学而不思则罔，思而不学则殆", "author": "孔子"},
+    {"content": "业精于勤，荒于嬉；行成于思，毁于随", "author": "韩愈"},
+    {"content": "书山有路勤为径，学海无涯苦作舟", "author": "韩愈"},
+    {"content": "锲而不舍，金石可镂", "author": "荀子"},
+    {"content": "千里之行，始于足下", "author": "老子"},
+    {"content": "失败是成功之母", "author": "列宁"},
+    {"content": "世上无难事，只要肯登攀", "author": "毛泽东"},
+    {"content": "路漫漫其修远兮，吾将上下而求索", "author": "屈原"},
+    {"content": "先天下之忧而忧，后天下之乐而乐", "author": "范仲淹"},
+    {"content": "人生自古谁无死，留取丹心照汗青", "author": "文天祥"},
+    {"content": "苟利国家生死以，岂因祸福避趋之", "author": "林则徐"},
+    {"content": "我自横刀向天笑，去留肝胆两昆仑", "author": "谭嗣同"},
+    {"content": "为中华之崛起而读书", "author": "周恩来"},
+    {"content": "星星之火，可以燎原", "author": "毛泽东"},
+    {"content": "一切反动派都是纸老虎", "author": "毛泽东"},
+    {"content": "不到长城非好汉", "author": "毛泽东"},
+    {"content": "数风流人物，还看今朝", "author": "毛泽东"},
+]
 
 app = Flask(__name__, static_folder='frontend', static_url_path='')
 CORS(app)
@@ -260,6 +290,52 @@ def set_desktop_wallpaper():
 
 def set_wallpaper_by_path(file_path):
     try:
+        quote = random.choice(QUOTES)
+        img = Image.open(file_path)
+        img = img.convert('RGBA')
+        
+        overlay = Image.new('RGBA', img.size, (0, 0, 0, 0))
+        draw = ImageDraw.Draw(overlay)
+        
+        font_size = min(img.width, img.height) // 20
+        font = ImageFont.truetype("C:/Windows/Fonts/simkai.ttf", font_size)
+                
+        text_lines = []
+        text_lines.append(quote["content"])
+        
+        line_height = int(font_size * 1.8)
+        max_line_width = 0
+        for line in text_lines:
+            bbox = draw.textbbox((0, 0), line, font=font)
+            max_line_width = max(max_line_width, bbox[2])
+        
+        padding = 30
+        box_width = max_line_width + padding * 2
+        box_height = line_height * len(text_lines) + padding * 2
+        
+        position_x = img.width - box_width - 150
+     
+        margin = 40
+        position_y = img.height - box_height - margin
+
+        draw.rounded_rectangle(
+            [position_x, position_y, position_x + box_width, position_y + box_height],
+            radius=15,
+            fill=(0, 0, 0, 160)
+        )
+        
+        y_offset = position_y + padding
+        for i, line in enumerate(text_lines):
+            f = font if i < 2 else font
+            draw.text((position_x + padding, y_offset), line, font=f, fill=(255, 220, 180, 255))
+            y_offset += line_height
+        
+        combined = Image.alpha_composite(img, overlay)
+        combined = combined.convert('RGB')
+        
+        temp_path = file_path + ".temp.jpg"
+        combined.save(temp_path, 'JPEG', quality=95)
+        
         SPI_SETDESKWALLPAPER = 20
         SPIF_UPDATEINIFILE = 0x01
         SPIF_SENDCHANGE = 0x02
@@ -267,9 +343,13 @@ def set_wallpaper_by_path(file_path):
         result = ctypes.windll.user32.SystemParametersInfoW(
             SPI_SETDESKWALLPAPER,
             0,
-            file_path,
+            temp_path,
             SPIF_UPDATEINIFILE | SPIF_SENDCHANGE
         )
+        
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+        
         return {"success": result != 0}
     except Exception as e:
         return {"success": False, "error": str(e)}
@@ -298,6 +378,10 @@ def set_auto_change_config():
         wallpaper_app.stop_auto_change_func()
     
     return jsonify({"success": True})
+
+@app.route('/api/poems', methods=['GET'])
+def get_poems():
+    return jsonify(QUOTES)
 
 @app.route('/api/free-wallpapers', methods=['GET'])
 def get_free_wallpapers():
