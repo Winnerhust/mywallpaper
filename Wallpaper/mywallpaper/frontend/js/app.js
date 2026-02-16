@@ -431,9 +431,7 @@ function setupEventListeners() {
     document.getElementById('btn-change-now').onclick = async () => {
         const res = await fetch(`${API_BASE}/change-wallpaper-now`, { method: 'POST' });
         const result = await res.json();
-        if (result.success) {
-            alert('壁纸已更换！');
-        } else {
+        if (!result.success) {
             alert('更换失败: ' + (result.error || '未知错误'));
         }
     };
