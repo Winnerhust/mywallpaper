@@ -312,7 +312,6 @@ function setupEventListeners() {
         });
         const result = await res.json();
         if (result.success) {
-            alert('设置保存成功！');
             document.getElementById('settings-modal').classList.remove('show');
         } else {
             alert('设置保存失败');
@@ -333,7 +332,6 @@ function setupEventListeners() {
         const result = await res.json();
         if (result.success) {
             await loadWallpapers();
-            alert('保存成功');
         } else {
             alert('目录不存在');
         }
@@ -347,9 +345,7 @@ function setupEventListeners() {
                 body: JSON.stringify({ path: currentPreviewWallpaper.path })
             });
             const result = await res.json();
-            if (result.success) {
-                alert('壁纸设置成功！');
-            } else {
+            if (!result.success) {
                 alert('壁纸设置失败: ' + result.error);
             }
         }
@@ -383,7 +379,6 @@ function setupEventListeners() {
             });
             const result = await res.json();
             if (result.success) {
-                alert('下载成功！');
                 document.getElementById('online-preview-modal').classList.remove('show');
                 await loadWallpapers();
             } else {
@@ -410,7 +405,6 @@ function setupEventListeners() {
                 });
                 const setResult = await setRes.json();
                 if (setResult.success) {
-                    alert('壁纸设置成功！');
                     document.getElementById('online-preview-modal').classList.remove('show');
                     await loadWallpapers();
                 } else {
