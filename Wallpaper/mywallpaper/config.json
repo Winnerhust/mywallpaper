@@ -1,5 +1,5 @@
 {
-  "wallpaper_dir": "C:\\Users\\chenxueyou\\Pictures\\我的壁纸",
+  "wallpaper_dir": "C:\\Users\\OseasyVM\\Pictures\\我的壁纸",
   "categories": [
     "全部",
     "风景",
@@ -11,5 +11,6 @@
   "auto_change_enabled": true,
   "auto_change_interval": 1,
   "auto_change_category": "全部",
-  "auto_change_mode": "online"
+  "auto_change_mode": "online",
+  "show_quote": true
 }
