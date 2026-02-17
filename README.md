@@ -68,7 +68,7 @@ python main.py
 运行集成测试：
 ```bash
 cd Wallpaper/mywallpaper
-python -m pytest test_integration.py
+python -m pytest test_integration.py -v
 ```
 
 ## 项目结构
