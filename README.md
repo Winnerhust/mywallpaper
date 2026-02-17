@@ -61,6 +61,15 @@ python main.py
 - flask==3.0.0
 - flask-cors==4.0.0
 - pywebview==5.0.0
+- pytest==8.0.0
+
+## 测试
+
+运行集成测试：
+```bash
+cd Wallpaper/mywallpaper
+python -m pytest test_integration.py
+```
 
 ## 项目结构
 
